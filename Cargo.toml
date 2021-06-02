@@ -1,5 +1,5 @@
 [package]
-name = "rust_clip"
+name = "rustCLIP"
 version = "0.1.0"
 authors = ["Johann Maree <jnmaree@protonmail.com>"]
 edition = "2018"
