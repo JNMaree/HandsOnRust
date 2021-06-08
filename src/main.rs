@@ -1,28 +1,19 @@
 #![allow(non_snake_case)]
 
-use std::io;
+mod parser;
 
 //const STRING_BUFFER: usize = 256;
 
 fn main() {
     println!("start_program:");
-    REPL();
-    println!("end_program.");
-}
+    
+    //Program Logic Start
+    let args: Vec<String> = std::env::args().collect();
 
-fn REPL() -> u8
-{
-    loop {
-        print!("Enter Command:");
-        let mut uinput = String::new();
-        std::io::stdin().read_line(&mut uinput).expect("Failed to read input.");
-        
-        if uinput.to_lowercase().eq("exit") {
-            println!("exiting...");
-            break;
-        } else {
-            println!("cmd:{} exe!", uinput.to_uppercase());
-        }
+    match args.len() {
+        1 => usage(),
+        2 => parse_input_file(),
     }
-    return 0;
+
+    println!("end_program.");
 }
