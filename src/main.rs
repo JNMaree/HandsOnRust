@@ -4,17 +4,20 @@
 use std::io::stdin;
 
 fn main() {
-    let mut list: Vec<Phrase> = Vec::new();
-    list.push(Phrase::new("one",1));
-    list.push(Phrase::new("two",2));
-    list.push(Phrase::new("three",3));
-    let mut pass = false;
-    while !pass {
-        pass = read_passphrase(&list);
+    let mut list: Vec<Phrase> = vec![
+        Phrase::new("one",1),
+        Phrase::new("two",2),
+        Phrase::new("three",3),
+    ];
+    loop {
+        if read_passphrase(&mut list) > 1 {
+            break;
+        }
     }
     println!("program completed successfully!");
 }
 
+#[derive(Debug)]
 struct Phrase{
     pass: String,
     numeric: i8
@@ -27,31 +30,39 @@ impl Phrase{
             numeric:num
         }
     }
-
     fn print_pass(&self) {
-        println!("pass:{}, numeric:{}", self.pass, self.numeric);
+        println!("PASSED:{:#?}", self);
     }
-
 }
 
-fn read_passphrase(list: &[Phrase]) -> bool{
+fn read_passphrase(list: &mut Vec<Phrase>) -> i8 {
     let mut uinput = String::new();
     println!("passphrase:");
-    stdin().read_line(&mut uinput).expect("read_failed");
+    stdin().read_line(&mut uinput).expect("read_line failed!");
     let passed = list.iter().find(|phrase| phrase.pass == uinput.trim());
-    match passed {
-        // If a phrase was found in list
-        Some(phrase) => {
-            phrase.print_pass();
-            uinput.clear();
-            return true
-        },
 
+    if let Some(phrase) = passed {
+        // If a phrase was found in list
+        phrase.print_pass();
+        uinput.clear();
+        2
+    } else {
         // If No phrase was found
-        None => {
-            println!("phrase:{:?} not recognised!", uinput.trim());
+        let newpass = String::from(uinput.trim());
+        println!("phrase:{:?} not recognised! Add passphrase?", newpass);
+        uinput.clear();
+        stdin().read_line(&mut uinput).expect("read_line failed!");
+        if uinput.trim().eq_ignore_ascii_case("y"){
             uinput.clear();
-            false
+            println!("Insert Numeric Equivalent:");
+            stdin().read_line(&mut uinput).expect("unknown parameter inserted");
+            let num: i8 = uinput.trim().parse().unwrap();
+            list.push(Phrase::new(&newpass, num));
+            1
+        } else {
+            println!("Pass:{} NOT added!", newpass);
+            uinput.clear();
+            0
         }
     }
 }
