@@ -39,8 +39,8 @@ fn is_prime(num: u8) -> bool {
     } else if num == 2 {
         true
     } else {
-        let mut factor = 2;
-        let root:u8 = (num as f32).sqrt() as u8;
+        let mut factor:f32 = 2.0;
+        let root:f32 = (num as f32).sqrt();
         while factor < root {
             if num % factor == 0 {
                 return false
