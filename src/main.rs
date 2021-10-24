@@ -2,6 +2,22 @@
 #![warn(clippy::all, clippy::pedantic)]
 
 use std::io::stdin;
+use crate::PhraseDivision::{*};
+
+#[derive(Debug)]
+enum PhraseDivision{
+    NotDefined,
+    Prime,
+    Odd,
+    Even,
+}
+
+#[derive(Debug)]
+struct Phrase{
+    pass: String,
+    numeric: u8,
+    division: PhraseDivision,
+}
 
 fn main() {
     let mut list: Vec<Phrase> = vec![
@@ -17,17 +33,38 @@ fn main() {
     println!("program completed successfully!");
 }
 
-#[derive(Debug)]
-struct Phrase{
-    pass: String,
-    numeric: i8
+fn is_prime(num: u8) -> bool {
+    if num == 1 {
+        false
+    } else if num == 2 {
+        true
+    } else {
+        let mut factor = 2;
+        let root:u8 = (num as f32).sqrt() as u8;
+        while factor < root {
+            if num % factor == 0 {
+                return false
+            }
+            factor += 1
+        }
+        true
+    }
 }
 
 impl Phrase{
-    fn new(str:&str, num:i8) -> Self {
+    fn new(str:&str, num:u8) -> Self {
+        let mut pd: PhraseDivision;
+        if num % 2 == 0 {
+            pd = Even;
+        } else if is_prime(num) {
+            pd = Prime;
+        } else {
+            pd = Odd;
+        }
         Self{
-            pass:str.to_lowercase(),
-            numeric:num
+            pass: str.to_lowercase(),
+            numeric: num,
+            division: pd,
         }
     }
     fn print_pass(&self) {
@@ -35,7 +72,7 @@ impl Phrase{
     }
 }
 
-fn read_passphrase(list: &mut Vec<Phrase>) -> i8 {
+fn read_passphrase(list: &mut Vec<Phrase>) -> u8 {
     let mut uinput = String::new();
     println!("passphrase:");
     stdin().read_line(&mut uinput).expect("read_line failed!");
@@ -56,7 +93,7 @@ fn read_passphrase(list: &mut Vec<Phrase>) -> i8 {
             uinput.clear();
             println!("Insert Numeric Equivalent:");
             stdin().read_line(&mut uinput).expect("unknown parameter inserted");
-            let num: i8 = uinput.trim().parse().unwrap();
+            let num: u8 = uinput.trim().parse().unwrap();
             list.push(Phrase::new(&newpass, num));
             1
         } else {
