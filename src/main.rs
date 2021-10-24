@@ -32,23 +32,26 @@ impl Phrase{
         println!("pass:{}, numeric:{}", self.pass, self.numeric);
     }
 
-    fn eq(&self, phrase:&str) -> bool{
-        return self.pass.eq(phrase);
-    }
 }
 
 fn read_passphrase(list: &[Phrase]) -> bool{
     let mut uinput = String::new();
     println!("passphrase:");
     stdin().read_line(&mut uinput).expect("read_failed");
-    for i in list {
-        if i.eq(&uinput.trim()) {
-            i.print_pass();
+    let passed = list.iter().find(|phrase| phrase.pass == uinput.trim());
+    match passed {
+        // If a phrase was found in list
+        Some(phrase) => {
+            phrase.print_pass();
             uinput.clear();
             return true
+        },
+
+        // If No phrase was found
+        None => {
+            println!("phrase:{:?} not recognised!", uinput.trim());
+            uinput.clear();
+            false
         }
     }
-    println!("phrase:{:?} not recognised!", uinput.trim());
-    uinput.clear();
-    false
 }
