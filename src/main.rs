@@ -2,14 +2,25 @@
 #![warn(clippy::all, clippy::pedantic)]
 use bracket_lib::prelude::*;
 
+const SCREEN_WIDTH: i32 = 80;
+const SCREEN_HEIGHT: i32 = 50;
+const FRAME_DURATION: f32 = 75.0;
+const X_OFFSET: i32 = 5;
+
+
+
 struct State {
     mode: GameMode,
+    player: Player,
+    frame_time: f32,
 }
 
 impl State {
     fn new() -> Self {
         State {
             mode: GameMode::Menu,
+            player:Player::new(X_OFFSET,SCREEN_HEIGHT/2),
+            frame_time: 0.0
         }
     }
     fn main_menu(&mut self, ctx: &mut BTerm) {
@@ -27,11 +38,25 @@ impl State {
         }
     }
     fn restart(&mut self) {
+        self.player = Player::new(X_OFFSET,SCREEN_HEIGHT/2);
+        self.frame_time = 0.0;
         self.mode = GameMode::Playing;
     }
     fn play(&mut self, ctx: &mut BTerm) {
-        //TODO
-        self.mode = GameMode::End;
+        ctx.cls_bg(NAVY);
+        self.frame_time += ctx.frame_time_ms;
+        if self.frame_time > FRAME_DURATION {   // Set new Frame
+            self.frame_time = 0.0;
+            self.player.gravity_move();
+        }
+        if let Some(VirtualKeyCode::Space) = ctx.key {  //Trigger flap function
+            self.player.flap();
+        }
+        self.player.render(ctx);
+        ctx.print(0,0, "Press [SPACE] to flap!");
+        if self.player.y > SCREEN_HEIGHT {  // If player reaches screen end
+            self.mode = GameMode::End;
+        }
     }
     fn dead(&mut self, ctx: &mut BTerm) {
         ctx.cls();
@@ -67,9 +92,39 @@ enum GameMode {
     End,
 }
 
+struct Player {
+    x: i32,
+    y: i32,
+    velocity: f32,
+}
+
+impl Player {
+    fn new(x: i32, y:i32) -> Self {
+        Player {
+            x,
+            y,
+            velocity: 0.0,
+        }
+    }
+    fn render(&mut self, ctx: &mut BTerm) {
+        ctx.set(0, self.y, YELLOW1, BLANCHED_ALMOND, to_cp437('@'));
+    }
+    fn gravity_move(&mut self) {
+        if self.velocity < 2.0 {    //Terminal Velocity
+            self.velocity += 0.2;
+        }
+        self.y += self.velocity as i32;
+        self.x += 1;
+        if self.y < 0 {
+            self.y = 0;
+        }
+    }
+    fn flap(&mut self) {
+        self.velocity = -2.0;
+    }
+}
+
 fn main() -> BError {
-    let context = BTermBuilder::simple80x50()
-        .with_title("Flappy Dargon")
-        .build()?;
+    let context = BTermBuilder::simple80x50().with_title("Flappy Dargon").build()?;
     main_loop(context, State::new())
 }
