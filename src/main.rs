@@ -8,11 +8,13 @@ const FRAME_DURATION: f32 = 75.0;
 const X_OFFSET: i32 = 5;
 
 
-
+// State    -----------------------------------------------------------------------------------
 struct State {
     mode: GameMode,
     player: Player,
     frame_time: f32,
+    obstacle: Obstacle,
+    score: i32,
 }
 
 impl State {
@@ -20,7 +22,9 @@ impl State {
         State {
             mode: GameMode::Menu,
             player:Player::new(X_OFFSET,SCREEN_HEIGHT/2),
-            frame_time: 0.0
+            frame_time: 0.0,
+            obstacle: Obstacle::new(SCREEN_WIDTH, 0),
+            score: 0,
         }
     }
     fn main_menu(&mut self, ctx: &mut BTerm) {
@@ -54,7 +58,20 @@ impl State {
         }
         self.player.render(ctx);
         ctx.print(0,0, "Press [SPACE] to flap!");
-        if self.player.y > SCREEN_HEIGHT {  // If player reaches screen end
+        ctx.print(0,1, format!("SCore: {}", self.score));
+
+        // Obstacle & Score Functions
+        self.obstacle.render(ctx, self.player.x);
+        if self.player.x > self.obstacle.x {
+            self.score += 1;
+            self.obstacle = Obstacle::new(self.player.x + SCREEN_WIDTH, self.score);
+        }
+
+        // End Game Loop conditions
+        if self.player.y > SCREEN_HEIGHT {  // If player reaches vertical screen limit
+            self.mode = GameMode::End;
+        }
+        if self.obstacle.hit_obstacle(&self.player) { // If Obstacle hit
             self.mode = GameMode::End;
         }
     }
@@ -92,12 +109,12 @@ enum GameMode {
     End,
 }
 
+// Player   -----------------------------------------------------------------------------------
 struct Player {
     x: i32,
     y: i32,
     velocity: f32,
 }
-
 impl Player {
     fn new(x: i32, y:i32) -> Self {
         Player {
@@ -123,6 +140,47 @@ impl Player {
         self.velocity = -2.0;
     }
 }
+
+// Obstacles    -------------------------------------------------------------------------------
+struct Obstacle {
+    x: i32,
+    gap_y: i32,
+    size: i32,
+}
+impl Obstacle {
+    fn new(x: i32, score: i32) -> Self {
+        let mut random = RandomNumberGenerator::new();
+        Obstacle {
+            x,
+            gap_y: random.range(10, 40),
+            size: i32::max(2, 20 - score),
+        }
+    }
+    fn render(&mut self, ctx: &mut BTerm, player_x: i32) {
+        let screen_x = self.x - player_x;
+        let sizeD2 = self.size/2;
+
+        for y in 0..(self.gap_y - sizeD2){ // Draw TOP half
+            ctx.set(screen_x, y, RED, BLACK, to_cp437('|'));
+        }
+
+        for y in (self.gap_y + sizeD2)..SCREEN_HEIGHT { // Draw BOTTOM half
+            ctx.set(screen_x, y, RED, BLACK, to_cp437('|'));
+        }
+
+    }
+    fn hit_obstacle(&self, player: &Player) -> bool {
+        let sizeD2 = self.size/2;
+        if player.x == self.x {
+            if player.y > (self.gap_y + sizeD2) || player.y < (self.gap_y - sizeD2) {
+                return true
+            }
+            return false
+        }
+        return false
+    }
+}
+
 
 fn main() -> BError {
     let context = BTermBuilder::simple80x50().with_title("Flappy Dargon").build()?;
