@@ -2,11 +2,26 @@
 #![warn(clippy::all, clippy::pedantic)]
 use bracket_lib::prelude::*;
 
+//System Constants
 const SCREEN_WIDTH: i32 = 80;
 const SCREEN_HEIGHT: i32 = 50;
-const FRAME_DURATION: f32 = 75.0;
-const X_OFFSET: i32 = 5;
+const FRAME_DURATION: f32 = 60.0;
+//Player Constants
+const X_OFFSET: i32 = 4;
+const X_VELOCITY_INCLINE:f32 = 2.0;
+const Y_GRAV_VELOCITY: f32 = 1.0;
+const Y_TERMINAL_VELOCITY: f32 = 1.8;
+const Y_FLAP_VELOCITY: f32 = 4.0;
+//Obstacle Constants
+const OBS_MIN_SIZE: i32 = 4;
+const OBS_MAX_SIZE: i32 = 20;
+const OBS_SIZE_DECLINE: i32 = 2;
 
+enum GameMode {
+    Menu,
+    Playing,
+    End,
+}
 
 // State    -----------------------------------------------------------------------------------
 struct State {
@@ -15,6 +30,7 @@ struct State {
     frame_time: f32,
     obstacle: Obstacle,
     score: i32,
+    speed: f32,
 }
 
 impl State {
@@ -25,6 +41,7 @@ impl State {
             frame_time: 0.0,
             obstacle: Obstacle::new(SCREEN_WIDTH, 0),
             score: 0,
+            speed: 0.0,
         }
     }
     fn main_menu(&mut self, ctx: &mut BTerm) {
@@ -44,12 +61,15 @@ impl State {
     fn restart(&mut self) {
         self.player = Player::new(X_OFFSET,SCREEN_HEIGHT/2);
         self.frame_time = 0.0;
+        self.score = 0;
+        self.speed = 0.0;
+        self.obstacle = Obstacle::new(SCREEN_WIDTH, 0);
         self.mode = GameMode::Playing;
     }
     fn play(&mut self, ctx: &mut BTerm) {
         ctx.cls_bg(NAVY);
         self.frame_time += ctx.frame_time_ms;
-        if self.frame_time > FRAME_DURATION {   // Set new Frame
+        if self.frame_time > (FRAME_DURATION - self.speed) {   // Set new Frame
             self.frame_time = 0.0;
             self.player.gravity_move();
         }
@@ -65,6 +85,7 @@ impl State {
         if self.player.x > self.obstacle.x {
             self.score += 1;
             self.obstacle = Obstacle::new(self.player.x + SCREEN_WIDTH, self.score);
+            self.speed += X_VELOCITY_INCLINE;
         }
 
         // End Game Loop conditions
@@ -76,11 +97,11 @@ impl State {
         }
     }
     fn dead(&mut self, ctx: &mut BTerm) {
-        ctx.cls();
+        ctx.cls();  //Play again menu
         ctx.print_centered(4, "You Died!");
+        ctx.print_centered(6, &format!("You Earned {} points!", self.score));
         ctx.print_centered(8, "[P] to Play again");
         ctx.print_centered(10, "[Q] to Quit ...");
-
         let key = ctx.key;
         match key {
             Some(VirtualKeyCode::P) => self.restart(),
@@ -103,11 +124,7 @@ impl GameState for State {
     }
 }
 
-enum GameMode {
-    Menu,
-    Playing,
-    End,
-}
+
 
 // Player   -----------------------------------------------------------------------------------
 struct Player {
@@ -127,8 +144,8 @@ impl Player {
         ctx.set(0, self.y, YELLOW1, BLANCHED_ALMOND, to_cp437('@'));
     }
     fn gravity_move(&mut self) {
-        if self.velocity < 2.0 {    //Terminal Velocity
-            self.velocity += 0.2;
+        if self.velocity < Y_TERMINAL_VELOCITY {    //Fall Velocity
+            self.velocity += Y_GRAV_VELOCITY;
         }
         self.y += self.velocity as i32;
         self.x += 1;
@@ -137,7 +154,7 @@ impl Player {
         }
     }
     fn flap(&mut self) {
-        self.velocity = -2.0;
+        self.velocity = -Y_FLAP_VELOCITY;
     }
 }
 
@@ -153,7 +170,7 @@ impl Obstacle {
         Obstacle {
             x,
             gap_y: random.range(10, 40),
-            size: i32::max(2, 20 - score),
+            size: i32::max(OBS_MIN_SIZE, OBS_MAX_SIZE - score/OBS_SIZE_DECLINE),
         }
     }
     fn render(&mut self, ctx: &mut BTerm, player_x: i32) {
