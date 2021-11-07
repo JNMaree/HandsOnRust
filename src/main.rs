@@ -1,105 +1,75 @@
 #![allow(non_snake_case)]
 #![warn(clippy::all, clippy::pedantic)]
+use bracket_lib::prelude::*;
 
-use std::io::stdin;
-use crate::PhraseDivision::{*};
-
-#[derive(Debug)]
-enum PhraseDivision{
-    NotDefined,
-    Prime,
-    Odd,
-    Even,
+struct State {
+    mode: GameMode,
 }
 
-#[derive(Debug)]
-struct Phrase{
-    pass: String,
-    numeric: u8,
-    division: PhraseDivision,
-}
-
-fn main() {
-    let mut list: Vec<Phrase> = vec![
-        Phrase::new("one",1),
-        Phrase::new("two",2),
-        Phrase::new("three",3),
-    ];
-    loop {
-        if read_passphrase(&mut list) > 1 {
-            break;
+impl State {
+    fn new() -> Self {
+        State {
+            mode: GameMode::Menu,
         }
     }
-    println!("program completed successfully!");
-}
+    fn main_menu(&mut self, ctx: &mut BTerm) {
+        ctx.cls();
+        ctx.print_centered(4, "Play Flappy Dargon");
+        ctx.print_centered(8, "[P] - Play Game");
+        ctx.print_centered(10, "[Q] - Quit");
 
-fn is_prime(num: u8) -> bool {
-    if num == 1 {
-        false
-    } else if num == 2 {
-        true
-    } else {
-        let mut factor:f32 = 2.0;
-        let root:f32 = (num as f32).sqrt();
-        while factor < root {
-            if num % factor == 0 {
-                return false
+        if let Some(key) = ctx.key {
+            match key {
+                VirtualKeyCode::P => self.restart(),
+                VirtualKeyCode::Q => self.quit(ctx),
+                _ => {}
             }
-            factor += 1
         }
-        true
+    }
+    fn restart(&mut self) {
+        self.mode = GameMode::Playing;
+    }
+    fn play(&mut self, ctx: &mut BTerm) {
+        //TODO
+        self.mode = GameMode::End;
+    }
+    fn dead(&mut self, ctx: &mut BTerm) {
+        ctx.cls();
+        ctx.print_centered(4, "You Died!");
+        ctx.print_centered(8, "[P] to Play again");
+        ctx.print_centered(10, "[Q] to Quit ...");
+
+        let key = ctx.key;
+        match key {
+            Some(VirtualKeyCode::P) => self.restart(),
+            Some(VirtualKeyCode::Q) => self.quit(ctx),
+            _ => {}
+        }
+    }
+    fn quit(&mut self, ctx: &mut BTerm) {
+        ctx.quit();
     }
 }
 
-impl Phrase{
-    fn new(str:&str, num:u8) -> Self {
-        let mut pd: PhraseDivision;
-        if num % 2 == 0 {
-            pd = Even;
-        } else if is_prime(num) {
-            pd = Prime;
-        } else {
-            pd = Odd;
+impl GameState for State {
+    fn tick(&mut self, ctx: &mut BTerm) {
+        match self.mode {
+            GameMode::Menu => self.main_menu(ctx),
+            GameMode::Playing => self.play(ctx),
+            GameMode::End => self.dead(ctx),
         }
-        Self{
-            pass: str.to_lowercase(),
-            numeric: num,
-            division: pd,
-        }
-    }
-    fn print_pass(&self) {
-        println!("PASSED:{:#?}", self);
     }
 }
 
-fn read_passphrase(list: &mut Vec<Phrase>) -> u8 {
-    let mut uinput = String::new();
-    println!("passphrase:");
-    stdin().read_line(&mut uinput).expect("read_line failed!");
-    let passed = list.iter().find(|phrase| phrase.pass == uinput.trim());
+enum GameMode {
+    Menu,
+    Playing,
+    End,
+}
 
-    if let Some(phrase) = passed {
-        // If a phrase was found in list
-        phrase.print_pass();
-        uinput.clear();
-        2
-    } else {
-        // If No phrase was found
-        let newpass = String::from(uinput.trim());
-        println!("phrase:{:?} not recognised! Add passphrase?", newpass);
-        uinput.clear();
-        stdin().read_line(&mut uinput).expect("read_line failed!");
-        if uinput.trim().eq_ignore_ascii_case("y"){
-            uinput.clear();
-            println!("Insert Numeric Equivalent:");
-            stdin().read_line(&mut uinput).expect("unknown parameter inserted");
-            let num: u8 = uinput.trim().parse().unwrap();
-            list.push(Phrase::new(&newpass, num));
-            1
-        } else {
-            println!("Pass:{} NOT added!", newpass);
-            uinput.clear();
-            0
-        }
-    }
+fn main() -> BError {
+    let context = BTermBuilder::simple80x50()
+        .with_title("Flappy Dargon")
+        .build()?;
+    main_loop(context, State::new())
 }
